@@ -33,7 +33,8 @@ public class AsmCodeGenerator implements FileGenerator {
 
     @Override
     public void generate(FileWriter fileWriter) throws IOException {
-        int indiceSalto = 1;
+        fileWriter.write("; Código assembler desactivado temporalmente\n");
+        /*int indiceSalto = 1;
         Queue<String> colaEtiqSalto = new LinkedList<>();
         Stack<Integer> pilaCeldaParaSaltar = new Stack<Integer>();
         String etiqSalto = "";
@@ -205,7 +206,7 @@ public class AsmCodeGenerator implements FileGenerator {
         fileWriter.write("int 21h\n");
         fileWriter.write("END START\n");
 
-
+*/
     }
 
     private boolean celdaEsOperador(String celda){

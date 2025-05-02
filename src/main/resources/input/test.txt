@@ -2,11 +2,14 @@
 
 init {
     a1, b2, edad : Int
-    c3 : Float
+    c3, p1, p2, p3 : Float
     d4, d5, d6, genero : String
 }
 
 edad := 19
+p1 := -1.7
+p2 := 3.0
+p3 := 4.0
 
 mientras (edad >= 18){
 	a1 := 1
@@ -17,4 +20,25 @@ mientras (edad >= 18){
 }
 
 a1 := 30
+
+c3 := negativeCalculation(3.5, -2.0, p1, p2, -3.0) *- impar -*
+
+c3 := negativeCalculation(-4.0, 2.3, p1, 5.6) *- par -*
+
+c3 := negativeCalculation(3.5, p2, 3.0) *- sin negativos -*
+
+c3 := negativeCalculation(-3.5) *- 1 elemento neg-*
+
+c3 := negativeCalculation(3.5) *- 1 elemento pos-*
+
+b2 := sumFirstPrimes(9)
+
+b2 := sumFirstPrimes(0)
+
+b2 := sumFirstPrimes(1)
+
+b2 := sumFirstPrimes(2)
+
+b2 := sumFirstPrimes(3)
+
 

@@ -82,6 +82,8 @@ Escribir = "escribir"
 Triangulo = "triangulo"
 BinaryCount = "binaryCount"
 
+NegativeCalculation = "negativeCalculation"
+SumFirstPrimes = "sumFirstPrimes"
 
 /* ----------------------- OPERADORES ARITMETICOS -----------------------*/
 
@@ -174,6 +176,9 @@ Comment = "*-"  ((("-"+{CommentCharacters})* | ({CommentCharacters}|"*")* )*)* "
   {Triangulo} 							{ return symbol(ParserSym.TRIANGULO); }
   {BinaryCount}							{ return symbol(ParserSym.BINARY_COUNT); }
 
+  {NegativeCalculation}     { return symbol(ParserSym.NEGATIVE_CALCULATION); }
+  {SumFirstPrimes}          { return symbol(ParserSym.SUM_FIRST_PRIMES); }
+
   /* -----------------------  OPERADORES ARITMETICOS -----------------------*/
   {Plus}                                { return symbol(ParserSym.PLUS); }
   {Sub}                                 { return symbol(ParserSym.SUB); }
@@ -259,3 +264,6 @@ Comment = "*-"  ((("-"+{CommentCharacters})* | ({CommentCharacters}|"*")* )*)* "
 
 /* error fallback */
 [^]                              		{ throw new UnknownCharacterException(yytext()); }
+
+
+

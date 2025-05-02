@@ -7,6 +7,8 @@ import lyc.compiler.symboltable.Simbolo;
 import lyc.compiler.polacaInversa.PolacaInversa;
 import lyc.compiler.model.*;
 import lyc.compiler.TablaSintesis.TablaSintesis;
+import java.util.Queue;
+import java.util.LinkedList;
 
 import java.util.ArrayList;
 class Parser;
@@ -15,6 +17,15 @@ action code {:
 
 boolean es_and = false;
 int pos;
+
+int contadorneg = 0;
+//float suma = 0;
+//float mult = 1;
+//String resultado = " ";
+
+public Stack<String> pilaFloats = new Stack(); 
+public Queue<String> colaString = new LinkedList<>();
+public Queue<String> colaPrimos = new LinkedList<>();
 
 public Stack<Integer> pila = new Stack();
 public Stack<String> pilaTipoDato = new Stack();
@@ -123,7 +134,33 @@ public void resolverTipoDatoComparacion() throws InvalidComparisonException {
 	String tipoResultante = TablaSintesis.resolverTipoDatoComparacion(leftSide, rightSide);
 }
 
+private boolean esPrimo(int num) {
+    if (num < 2) return false;
+    for (int i = 2; i <= Math.sqrt(num); i++) {
+        if (num % i == 0) return false;
+    }
+    return true;
+}
+
+public int calcularNumerosPrimos(int n){
+	int suma = 0;
+	int contador = 0;
+	int num = 2;
+
+	while(contador < n){
+		if(esPrimo(num)){
+			suma += num;
+			contador++;
+			colaPrimos.add(Integer.toString(num));
+		}
+		num++;
+	}
+	return suma;
+}
+
 :};
+
+
 
 
 
@@ -154,6 +191,8 @@ terminal ESCRIBIR;
 terminal TRIANGULO;
 terminal BINARY_COUNT;
 
+terminal NEGATIVE_CALCULATION;
+terminal SUM_FIRST_PRIMES;
 
 /* ----------------------- OPERADORES ARITMETICOS -----------------------*/
 
@@ -217,6 +256,8 @@ non terminal lista_identificadores;
 non terminal tipo_dato;
 non terminal lista;
 non terminal elementos_lista;
+non terminal fmen;
+non terminal lista_neg;
 
 
 // -- sentencias del lenguaje
@@ -230,8 +271,11 @@ non terminal sentencia_leer;
 non terminal sentencia_escribir;
 non terminal sentencia_binarycount;
 non terminal sentencia_triangulo;
+non terminal sentencia_negativecalculation;
+non terminal sentencia_sumfirstprimes;
 
 
+//---------------------------------------------------------------------------
 // --- condicionales y comparadores
 non terminal condition_group;
 non terminal condition;
@@ -263,6 +307,17 @@ assignment ::= IDENTIFIER:id ASSIG expression {:
 
 	insertarEnPolaca(id.toString());
 	insertarEnPolaca("=");
+
+	if(!pilaFloats.isEmpty()){
+		String top = pilaFloats.pop();
+		//System.out.println("Elemento de la pila del id: " + top);
+		Simbolo simbolo = SymbolTable.getSymbolTable().getSymbol(id.toString());
+		if(simbolo != null){
+			simbolo.setValor(top);
+		}else{
+			System.out.println("Error no existe el simbolo");
+		}
+	}
 :};
 assignment ::= IDENTIFIER:id ASSIG sentencia_binarycount {:
 	System.out.println("Parser: assignment -> IDENTIFIER (" + id + ")  ASSIG sentencia_binarycount");
@@ -275,6 +330,18 @@ assignment ::= IDENTIFIER:id ASSIG sentencia_triangulo {:
 	System.out.println("Parser: assignment -> IDENTIFIER (" + id + ")  ASSIG sentencia_triangulo");
 	verificarId(id);
 	insertarEnPolaca("@tipoTriangulo");
+	insertarEnPolaca(id.toString());
+	insertarEnPolaca("=");
+:};
+assignment ::= IDENTIFIER:id ASSIG sentencia_negativecalculation {:
+	System.out.println("Parser: assignment -> IDENTIFIER (" + id + ") ASSIG sentencia_negativeCalculation");
+	verificarId(id);
+	insertarEnPolaca(id.toString());
+	insertarEnPolaca("=");
+:};
+assignment ::= IDENTIFIER:id ASSIG sentencia_sumfirstprimes {:
+	System.out.println("Parser: assignment -> IDENTIFIER (" + id + ")  ASSIG sentencia_sumfirstprimes");
+	verificarId(id);
 	insertarEnPolaca(id.toString());
 	insertarEnPolaca("=");
 :};
@@ -292,9 +359,6 @@ assignment ::= IDENTIFIER:id ASSIG STRING_CONSTANT:constant {:
     apilarTipoDatoId(id.toString());
 
 	resolverTipoDatoAsignacion();
-
-
-
 
 	insertarEnPolaca(constant.toString());
 	insertarEnPolaca(id.toString());
@@ -352,7 +416,6 @@ factor ::= IDENTIFIER:id  {:
 factor ::= INTEGER_CONSTANT:constant {:
 	System.out.println("Parser: factor -> INTEGER_CONSTANT (" + constant + ")");
 
-
 	apilarTipoDatoCte("INT");
 
 	insertar(constant.toString(), "INT", constant.toString(), true);
@@ -365,8 +428,18 @@ factor ::= FLOAT_CONSTANT:constant {:
 
 	insertar(constant.toString(), "FLOAT", constant.toString(), true);
 	insertarEnPolaca(constant.toString());
+	pilaFloats.push(constant.toString());
 :};
+factor ::= SUB FLOAT_CONSTANT:constant {:
+	System.out.println("Parser: factor -> SUB FLOAT_CONSTANT (" + "-" + constant + ")");
 
+	apilarTipoDatoCte("FLOAT");
+
+	insertar("-" + constant.toString(), "FLOAT", "-"+ constant.toString(), true);
+	insertarEnPolaca("-" + constant.toString());
+	pilaFloats.push("-" + constant.toString());
+:};
+// -------------------------------------------------------------------------------------------------------------
 //En este no hace falta agregar nada para la notación intermedia
 factor ::= OPEN_BRACKET expression CLOSE_BRACKET {:
 	System.out.println("Parser: factor -> OPEN_BRACKET expression CLOSE_BRACKET");
@@ -881,4 +954,154 @@ sentencia_triangulo ::= TRIANGULO OPEN_BRACKET expression COMMA {:
 	//retorno de funcion
 
 
+:};
+
+sentencia_negativecalculation ::= NEGATIVE_CALCULATION OPEN_BRACKET lista_neg CLOSE_BRACKET {:
+	System.out.println("Parser: sentencia_negativecalculation -> NEGATIVE_CALCULATION OPEN_BRACKET lista_neg CLOSE_BRACKET");
+	String valor = " ";
+	String resultado = " ";
+	float valorFloat;
+	float suma = 0;
+	float mult = 1;
+
+	insertarEnPolaca("negativeCalculation");
+
+	if(!colaString.isEmpty()){
+		if((contadorneg % 2) == 0){
+			// es par -> sumar
+			valor = colaString.poll();
+			valorFloat = Float.parseFloat(valor);
+			System.out.println("Valor convertido a Float: " + valorFloat);
+			suma += valorFloat;
+			if(contadorneg != 1){
+				// mas de 1 elemento negativo
+				insertarEnPolaca(valor);
+			}
+			
+		}else{
+			// es impar -> multiplicar
+			valor = colaString.poll();
+			valorFloat = Float.parseFloat(valor);
+			System.out.println("Valor convertido a Float: " + valorFloat);
+			mult *= valorFloat;
+			if(contadorneg != 1){
+				// mas de 1 elemento negativo
+				insertarEnPolaca(valor);
+			}
+		}
+	}
+
+	while(!colaString.isEmpty()){
+		
+		if((contadorneg % 2) == 0){
+			// es par -> sumar
+			valor = colaString.poll();
+			valorFloat = Float.parseFloat(valor);
+			System.out.println("Valor convertido a Float: " + valorFloat);
+			suma += valorFloat;
+			insertarEnPolaca(valor);
+			insertarEnPolaca("+");
+		}else{
+			// es impar -> multiplicar
+			valor = colaString.poll();
+			valorFloat = Float.parseFloat(valor);
+			System.out.println("Valor convertido a Float: " + valorFloat);
+			mult *= valorFloat;
+			insertarEnPolaca(valor);
+			insertarEnPolaca("*");
+		}
+	}
+	if(contadorneg == 0){
+		// no hay ningun valor negativo
+		resultado = "0";
+	}else{
+		resultado = (contadorneg % 2 == 0) ? Float.toString(suma) : Float.toString(mult);
+	}
+	
+	insertarEnPolaca(resultado);
+
+	// resetear valores
+	contadorneg = 0;
+	suma = 0;
+	mult = 1;
+
+:};
+lista_neg ::= lista_neg COMMA fmen {:
+	System.out.println("Parser: lista_neg -> lista_neg COMMA fmen");
+:};
+lista_neg ::= fmen {:
+	System.out.println("Parser: lista_neg -> fmen");
+:};
+fmen ::= FLOAT_CONSTANT:constant {:
+	System.out.println("Parser: fmen -> FLOAT_CONSTANT (" + constant + ")");
+
+	apilarTipoDatoCte("FLOAT");
+
+	insertar(constant.toString(), "FLOAT", constant.toString(), true);
+	
+:};
+fmen ::= SUB FLOAT_CONSTANT:constant {:
+	System.out.println("Parser: fmen -> FLOAT_CONSTANT (" + constant + ")");
+
+	apilarTipoDatoCte("FLOAT");
+
+	insertar("-" + constant.toString(), "FLOAT", "-" + constant.toString(), true);
+
+	colaString.add("-" + constant.toString());
+	contadorneg++; // aumento la cantidad de num negativos
+:};
+fmen ::= IDENTIFIER:id  {:
+	System.out.println("Parser: fmen -> IDENTIFIER (" + id + ")");
+	
+	verificarId(id);
+
+	actualizarUsoId(id.toString());
+
+	apilarTipoDatoId(id.toString());
+	String valor = " ";
+	float valorFloat;
+	Simbolo simbolo = SymbolTable.getSymbolTable().getSymbol(id.toString());
+		if(simbolo != null){
+			valor = simbolo.getValor();
+			System.out.println("El simbolo esta en tabla:  "+ valor);
+		}else{
+			System.out.println("El simbolo no esta en tabla");
+		}
+	valorFloat = Float.parseFloat(valor);
+	System.out.println("Valor convertido a Float: " + valorFloat);
+	if(valorFloat < 0){
+		colaString.add(valor);
+		contadorneg++; // aumento la cantidad de num negativos
+	}
+
+:};
+sentencia_sumfirstprimes ::= SUM_FIRST_PRIMES OPEN_BRACKET INTEGER_CONSTANT:constant CLOSE_BRACKET {:
+	System.out.println("Parser: sentencia_sumfirstprimes -> SUM_FIRST_PRIMES OPEN_BRACKET INTEGER_CONSTANT " + constant + " CLOSE_BRACKET");
+
+	// Convertimos el constante que viene como String a int
+	int n = Integer.parseInt(constant.toString());
+
+	// Calculamos la suma de los primeros n primos
+	int valor = calcularNumerosPrimos(n);
+	//System.out.println("Numeros primos suma: " + valor);
+
+	// Armamos el nombre de la constante
+	String valstring = Integer.toString(valor);
+	String primo = " ";
+
+	// Insertamos el nombre en la Polaca y desencolo los num primos
+	insertarEnPolaca("sumFirstPrimes");
+	if(!colaPrimos.isEmpty()){
+		primo = colaPrimos.poll();
+		if(!colaPrimos.isEmpty()){
+			insertarEnPolaca(primo);
+		}
+		
+	}
+	while(!colaPrimos.isEmpty()){
+		primo = colaPrimos.poll();
+		insertarEnPolaca(primo);
+		insertarEnPolaca("+");
+	}
+	insertarEnPolaca(valstring);
 :};
